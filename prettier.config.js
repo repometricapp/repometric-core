@@ -1,23 +1,39 @@
 /** @type {import("prettier").Config} */
 module.exports = {
-  // Always use semicolons
+  /**
+   * JavaScript / TypeScript
+   */
   semi: true,
-
-  // Prefer single quotes where possible
   singleQuote: true,
-
-  // Add trailing commas where valid in ES5
   trailingComma: 'es5',
+  arrowParens: 'always',
 
-  // Wrap markdown prose to improve readability
+  /**
+   * Formatting
+   */
+  printWidth: 100,
+  tabWidth: 2,
+  useTabs: false,
+
+  /**
+   * JSX / TSX
+   */
+  jsxSingleQuote: false,
+  bracketSpacing: true,
+
+  /**
+   * Markdown
+   */
   proseWrap: 'always',
 
-  // Maximum line length before wrapping
-  printWidth: 100,
+  /**
+   * CSS
+   */
+  singleAttributePerLine: false,
 
-  // Number of spaces per indentation level
-  tabWidth: 2,
-
-  // Always include parentheses around arrow function parameters
-  arrowParens: 'always',
+  /**
+   * Line endings
+   * Avoids issues across operating systems.
+   */
+  endOfLine: 'lf',
 };
