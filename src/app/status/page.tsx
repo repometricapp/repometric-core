@@ -1,14 +1,31 @@
 import { getGitHubStatus } from '@/lib/github/github.status';
 
+/**
+ * Force this page to be rendered dynamically.
+ *
+ * This ensures fresh data on every request since
+ * GitHub status information is time-sensitive.
+ */
 export const dynamic = 'force-dynamic';
 
+/**
+ * Status page displaying GitHub repository health
+ * for the configured user or organization.
+ *
+ * Phase 1:
+ * - Public repositories only
+ * - Read-only GitHub API access
+ */
 export default async function StatusPage() {
+  // Fetch aggregated GitHub status data
   const status = await getGitHubStatus();
 
   return (
     <main style={{ padding: 24 }}>
+      {/* Page heading */}
       <h1>GitHub Status</h1>
 
+      {/* Repository overview table */}
       <table border={1} cellPadding={8} cellSpacing={0}>
         <thead>
           <tr>
@@ -45,6 +62,7 @@ export default async function StatusPage() {
         </tbody>
       </table>
 
+      {/* Branch-level detail section */}
       <h2 style={{ marginTop: 32 }}>Branches</h2>
 
       <table border={1} cellPadding={8} cellSpacing={0}>
