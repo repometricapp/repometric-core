@@ -11,7 +11,7 @@ export function getRepositories(owner: string) {
   return githubRequest<GitHubRepository[]>(
     // GitHub API endpoint for listing user or org repositories
     // `per_page=100` is the maximum allowed per request
-    `/users/${owner}/repos?per_page=100`
+    `/orgs/${owner}/repos?per_page=100`
   );
 }
 
