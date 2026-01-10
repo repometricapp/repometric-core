@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "format": "prettier --config prettier.config.js --ignore-path .prettierignore --write ."
   },
   "dependencies": {
     "next": "16.1.1",
@@ -16,6 +17,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "prettier": "^3.7.4",
     "typescript": "^5"
   }
 }
