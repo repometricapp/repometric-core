@@ -28,3 +28,6 @@ toward more advanced use cases.
 - Requires GitHub authentication
 - Foundation for a production-ready, hosted, or paid offering
 - Built on top of this open-source core
+
+### Phase 4 - Single User Privet Repos 
+- Support and private repositories
