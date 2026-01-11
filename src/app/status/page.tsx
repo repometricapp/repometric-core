@@ -20,7 +20,7 @@ function formatDate(value: string | null) {
 export default async function StatusPage() {
   const githubState = config.github.state();
 
-  const status = githubState.mode === 'none' ? [] : await getGitHubStatus();
+  const status = githubState.mode === 'N/A' ? [] : await getGitHubStatus();
 
   const orgRepos = githubState.organization
     ? status.filter((r) => r.owner === githubState.organization)
@@ -102,7 +102,7 @@ export default async function StatusPage() {
         </table>
       </section>
 
-      {githubState.mode === 'none' ? (
+      {githubState.mode === 'N/A' ? (
         <p>No GitHub organization or user configured.</p>
       ) : (
         <>
