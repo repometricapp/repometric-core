@@ -38,10 +38,11 @@ export class GitHubApiError extends Error {
 /**
  * Default headers used for all GitHub API requests.
  *
- * Phase 1: unauthenticated, public-only access.
+ * Includes authentication token if available for private repo access.
  */
 const defaultHeaders: HeadersInit = {
   Accept: 'application/vnd.github+json',
+  ...(process.env.GITHUB_TOKEN && { Authorization: `token ${process.env.GITHUB_TOKEN}` }),
 };
 
 /**

@@ -53,8 +53,7 @@ export default function WorkflowPage() {
 
       <h1>GitHub Source Resolution Workflow</h1>
       <p>
-        This page documents how GitHub sources are resolved based on environment configuration. The
-        order below is authoritative.
+        This page documents how GitHub sources are resolved based on environment configuration.
       </p>
 
       <div className="workflow">
@@ -62,20 +61,20 @@ export default function WorkflowPage() {
         <div className="box">START</div>
         <div className="arrow">│</div>
 
-        {/* Explicit decision */}
+        {/* Explicit repos decision */}
         <div className="box decision">
           Are explicit repos configured?
           <br />
           <code>GITHUB_REPOS</code>
         </div>
 
-        <div className="center">YES → Explicit mode</div>
+        <div className="center">YES → Explicit Repos Mode</div>
         <div className="branch">
           <div className="note">
-            • Ignore single
+            • Only specified repositories are tracked
             <br />
-            • Ignore multi
-            <br />• Use repos only
+            • Format: owner/repo,owner/repo
+            <br />• Ignores GITHUB_SOURCES
           </div>
         </div>
 
@@ -83,41 +82,20 @@ export default function WorkflowPage() {
         <div className="center">NO</div>
         <div className="arrow">│</div>
 
-        {/* Multi decision */}
+        {/* Sources decision */}
         <div className="box decision">
-          Are multi sources configured?
+          Are sources configured?
           <br />
-          <code>GITHUB_ORGS</code> or <code>GITHUB_USERS</code>
+          <code>GITHUB_SOURCES</code>
         </div>
 
-        <div className="center">YES → Multi mode</div>
+        <div className="center">YES → Sources Mode</div>
         <div className="branch">
           <div className="note">
-            • Ignore single
+            • Discovers all repos from listed orgs/users
             <br />
-            • Ignore explicit
-            <br />• Any org/user combination allowed
-          </div>
-        </div>
-
-        <div className="arrow">│</div>
-        <div className="center">NO</div>
-        <div className="arrow">│</div>
-
-        {/* Single decision */}
-        <div className="box decision">
-          Is a single source configured?
-          <br />
-          <code>GITHUB_ORG_SINGLE</code> XOR <code>GITHUB_USER_SINGLE</code>
-        </div>
-
-        <div className="center">YES → Single mode</div>
-        <div className="branch">
-          <div className="note">
-            • Exactly one allowed (org OR user)
-            <br />
-            • Explicit excluded
-            <br />• Multi excluded
+            • Format: org1,user1,org2,user2
+            <br />• Mix orgs and users freely
           </div>
         </div>
 
@@ -129,7 +107,7 @@ export default function WorkflowPage() {
         <div className="box">
           No sources configured
           <br />
-          <span className="note">(Empty state)</span>
+          <span className="note">(Empty state - add GITHUB_SOURCES)</span>
         </div>
       </div>
     </main>
