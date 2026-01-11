@@ -18,7 +18,7 @@ export const config = {
      * GitHub username or organization to analyze.
      * Defaults to the Repometric organization for development.
      */
-    owner: process.env.GITHUB_OWNER ?? 'repometricapp',
+    owner: process.env.GITHUB_ORG_SINGLE ?? 'repometricapp',
 
     /**
      * Base URL for the GitHub REST API.

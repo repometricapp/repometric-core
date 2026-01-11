@@ -29,5 +29,6 @@ toward more advanced use cases.
 - Foundation for a production-ready, hosted, or paid offering
 - Built on top of this open-source core
 
-### Phase 4 - Single User Privet Repos 
+### Phase 4 - Single User Privet Repos
+
 - Support and private repositories
