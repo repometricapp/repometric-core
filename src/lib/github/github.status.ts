@@ -7,40 +7,90 @@ import { getOpenIssues } from './github.issues';
 import { GitHubApiError } from './github.client';
 
 /**
- * Aggregates GitHub repository health and status information
- * for a single organization, single user, or both (Phase 1).
+ * Aggregates GitHub repository health and status information.
+ *
+ * Supported sources:
+ * - Explicit repositories (highest priority)
+ * - Organizations
+ * - Users
  *
  * Public repositories only.
+ * No authentication assumptions.
  */
 export async function getGitHubStatus() {
-  const { mode, organization, user } = config.github.state();
+  const state = config.github.state();
 
   // Nothing configured → nothing to fetch
-  if (mode === 'N/A') {
+  if (state.isEmpty) {
     return [];
   }
 
   const allRepos: Array<{ repo: any; owner: string }> = [];
 
-  // Fetch org repositories
-  if ((mode === 'org-only' || mode === 'org-and-user') && organization) {
-    const orgRepos = await getOrgRepositories(organization);
-    orgRepos.forEach((repo) => {
-      allRepos.push({ repo, owner: organization });
-    });
+  /**
+   * 1️⃣ Explicit repos (highest priority)
+   */
+  if (state.sourceMode === 'explicit-repos') {
+    await Promise.all(
+      state.repos.map(async (fullName) => {
+        const [owner, repoName] = fullName.split('/');
+        if (!owner || !repoName) return;
+
+        // We need repo metadata; safest is to fetch via user/org repos
+        try {
+          const repos =
+            state.hasOrganizations && state.organizations.includes(owner)
+              ? await getOrgRepositories(owner)
+              : await getUserRepositories(owner);
+
+          const repo = repos.find((r) => r.name === repoName);
+          if (repo) {
+            allRepos.push({ repo, owner });
+          }
+        } catch {
+          // Ignore inaccessible or invalid repos
+        }
+      })
+    );
   }
 
-  // Fetch user repositories
-  if ((mode === 'user-only' || mode === 'org-and-user') && user) {
-    const userRepos = await getUserRepositories(user);
-    userRepos.forEach((repo) => {
-      allRepos.push({ repo, owner: user });
-    });
+  /**
+   * 2️⃣ Organizations and users (discovery mode)
+   */
+  if (state.sourceMode === 'orgs-and-users') {
+    // Fetch org repositories
+    await Promise.all(
+      state.organizations.map(async (org) => {
+        const repos = await getOrgRepositories(org).catch(() => []);
+        repos.forEach((repo) => {
+          allRepos.push({ repo, owner: org });
+        });
+      })
+    );
+
+    // Fetch user repositories
+    await Promise.all(
+      state.users.map(async (user) => {
+        const repos = await getUserRepositories(user).catch(() => []);
+        repos.forEach((repo) => {
+          allRepos.push({ repo, owner: user });
+        });
+      })
+    );
   }
 
-  // Process each repository in parallel
+  /**
+   * 3️⃣ De-duplicate repositories (owner/name)
+   */
+  const uniqueRepos = Array.from(
+    new Map(allRepos.map(({ repo, owner }) => [`${owner}/${repo.name}`, { repo, owner }])).values()
+  );
+
+  /**
+   * 4️⃣ Process each repository in parallel
+   */
   return Promise.all(
-    allRepos.map(async ({ repo, owner }) => {
+    uniqueRepos.map(async ({ repo, owner }) => {
       let buildErrorCode: number | null = null;
       let buildErrorMessage: string | null = null;
 
@@ -67,9 +117,9 @@ export async function getGitHubStatus() {
       return {
         // Repository metadata
         repo: repo.name,
+        owner,
         visibility: repo.private ? 'private' : 'public',
         defaultBranch: repo.default_branch,
-        owner, // 👈 important for combined mode
 
         // Branch information
         branchCount: branches.length,

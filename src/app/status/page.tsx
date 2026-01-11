@@ -20,13 +20,18 @@ function formatDate(value: string | null) {
 export default async function StatusPage() {
   const githubState = config.github.state();
 
-  const status = githubState.mode === 'N/A' ? [] : await getGitHubStatus();
+  const status = githubState.isEmpty ? [] : await getGitHubStatus();
 
-  const orgRepos = githubState.organization
-    ? status.filter((r) => r.owner === githubState.organization)
-    : [];
+  /**
+   * Single-source convenience (Phase 1)
+   * Take the FIRST org/user if present
+   */
+  const singleOrg = githubState.organizations[0] ?? null;
+  const singleUser = githubState.users[0] ?? null;
 
-  const userRepos = githubState.user ? status.filter((r) => r.owner === githubState.user) : [];
+  const orgRepos = singleOrg ? status.filter((r) => r.owner === singleOrg) : [];
+
+  const userRepos = singleUser ? status.filter((r) => r.owner === singleUser) : [];
 
   const renderRepoTable = (title: string, repos: typeof status) => (
     <section style={{ marginBottom: 48 }}>
@@ -53,7 +58,7 @@ export default async function StatusPage() {
           </thead>
           <tbody>
             {repos.map((repo) => (
-              <tr key={`${repo.owner}-${repo.repo}`}>
+              <tr key={`${repo.owner}/${repo.repo}`}>
                 <td>{repo.repo}</td>
                 <td>{repo.visibility === 'private' ? 'Private' : 'Public'}</td>
                 <td>{repo.branchCount}</td>
@@ -81,36 +86,36 @@ export default async function StatusPage() {
     <main style={{ padding: 24 }}>
       <h1>GitHub Status</h1>
 
-      {/* Configuration status */}
+      {/* Configuration summary */}
       <section style={{ marginBottom: 32 }}>
-        <h2>Configuration (.env file)</h2>
+        <h2>Configuration (.env)</h2>
         <table border={1} cellPadding={8} cellSpacing={0}>
           <tbody>
             <tr>
-              <td>Mode</td>
-              <td>{githubState.mode}</td>
+              <td>Source Mode</td>
+              <td>{githubState.sourceMode}</td>
             </tr>
             <tr>
-              <td>Organization</td>
-              <td>{githubState.organization ?? '—'}</td>
+              <td>Organizations</td>
+              <td>
+                {githubState.organizations.length > 0 ? githubState.organizations.join(', ') : '—'}
+              </td>
             </tr>
             <tr>
-              <td>User</td>
-              <td>{githubState.user ?? '—'}</td>
+              <td>Users</td>
+              <td>{githubState.users.length > 0 ? githubState.users.join(', ') : '—'}</td>
             </tr>
           </tbody>
         </table>
       </section>
 
-      {githubState.mode === 'N/A' ? (
+      {githubState.isEmpty ? (
         <p>No GitHub organization or user configured.</p>
       ) : (
         <>
-          {githubState.organization &&
-            renderRepoTable(`Single Organization Overview (${githubState.organization})`, orgRepos)}
+          {singleOrg && renderRepoTable(`Single Organization Overview (${singleOrg})`, orgRepos)}
 
-          {githubState.user &&
-            renderRepoTable(`Single User Overview (${githubState.user})`, userRepos)}
+          {singleUser && renderRepoTable(`Single User Overview (${singleUser})`, userRepos)}
         </>
       )}
     </main>
