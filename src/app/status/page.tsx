@@ -23,15 +23,13 @@ export default async function StatusPage() {
   const status = githubState.isEmpty ? [] : await getGitHubStatus();
 
   /**
-   * Single-source convenience (Phase 1)
-   * Take the FIRST org/user if present
+   * Group repos by owner for display
    */
-  const singleOrg = githubState.organizations[0] ?? null;
-  const singleUser = githubState.users[0] ?? null;
-
-  const orgRepos = singleOrg ? status.filter((r) => r.owner === singleOrg) : [];
-
-  const userRepos = singleUser ? status.filter((r) => r.owner === singleUser) : [];
+  const reposByOwner = status.reduce((acc, repo) => {
+    if (!acc[repo.owner]) acc[repo.owner] = [];
+    acc[repo.owner].push(repo);
+    return acc;
+  }, {} as Record<string, typeof status>);
 
   const renderRepoTable = (title: string, repos: typeof status) => (
     <section style={{ marginBottom: 48 }}>
@@ -96,26 +94,24 @@ export default async function StatusPage() {
               <td>{githubState.sourceMode}</td>
             </tr>
             <tr>
-              <td>Organizations</td>
+              <td>Sources</td>
               <td>
-                {githubState.organizations.length > 0 ? githubState.organizations.join(', ') : '—'}
+                {githubState.sources.length > 0 ? githubState.sources.join(', ') : '—'}
               </td>
-            </tr>
-            <tr>
-              <td>Users</td>
-              <td>{githubState.users.length > 0 ? githubState.users.join(', ') : '—'}</td>
             </tr>
           </tbody>
         </table>
       </section>
 
       {githubState.isEmpty ? (
-        <p>No GitHub organization or user configured.</p>
+        <p>No GitHub sources configured.</p>
       ) : (
         <>
-          {singleOrg && renderRepoTable(`Single Organization Overview (${singleOrg})`, orgRepos)}
-
-          {singleUser && renderRepoTable(`Single User Overview (${singleUser})`, userRepos)}
+          {Object.entries(reposByOwner).map(([owner, repos]) => (
+            <div key={owner}>
+              {renderRepoTable(`${owner}`, repos)}
+            </div>
+          ))}
         </>
       )}
     </main>

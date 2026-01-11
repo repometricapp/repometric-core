@@ -38,10 +38,11 @@ export class GitHubApiError extends Error {
 /**
  * Default headers used for all GitHub API requests.
  *
- * Phase 1: unauthenticated, public-only access.
+ * Includes authentication token if available for private repo access.
  */
 const defaultHeaders: HeadersInit = {
   Accept: 'application/vnd.github+json',
+  ...(process.env.GITHUB_TOKEN && { Authorization: `token ${process.env.GITHUB_TOKEN}` }),
 };
 
 /**
@@ -93,4 +94,33 @@ export async function githubRequest<T>(path: string, init: RequestInit = {}): Pr
   });
 
   return res.json() as Promise<T>;
+}
+
+/**
+ * Fetch current GitHub API rate limit information.
+ * Makes a request to /rate_limit endpoint to get real-time data.
+ */
+export async function fetchRateLimitInfo() {
+  try {
+    const data = await githubRequest<{
+      rate_limit: {
+        limit: number;
+        remaining: number;
+        reset: number;
+      };
+    }>('/rate_limit');
+
+    if (data.rate_limit) {
+      githubRateLimit = {
+        limit: data.rate_limit.limit,
+        remaining: data.rate_limit.remaining,
+        reset: data.rate_limit.reset,
+      };
+    }
+
+    return githubRateLimit;
+  } catch (error) {
+    console.error('Failed to fetch rate limit:', error);
+    return githubRateLimit;
+  }
 }

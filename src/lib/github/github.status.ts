@@ -36,13 +36,15 @@ export async function getGitHubStatus() {
         const [owner, repoName] = fullName.split('/');
         if (!owner || !repoName) return;
 
-        // We need repo metadata; safest is to fetch via user/org repos
+        // We need repo metadata; try as org first, then user
         try {
-          const repos =
-            state.hasOrganizations && state.organizations.includes(owner)
-              ? await getOrgRepositories(owner)
-              : await getUserRepositories(owner);
-
+          let repos;
+          try {
+            repos = await getOrgRepositories(owner);
+          } catch {
+            repos = await getUserRepositories(owner);
+          }
+          
           const repo = repos.find((r) => r.name === repoName);
           if (repo) {
             allRepos.push({ repo, owner });
@@ -55,26 +57,29 @@ export async function getGitHubStatus() {
   }
 
   /**
-   * 2️⃣ Organizations and users (discovery mode)
+   * 2️⃣ Sources (orgs and/or users - discovery mode)
    */
-  if (state.sourceMode === 'orgs-and-users') {
-    // Fetch org repositories
+  if (state.sourceMode === 'sources') {
+    // Try each source as both org and user (GitHub API will return appropriate results)
     await Promise.all(
-      state.organizations.map(async (org) => {
-        const repos = await getOrgRepositories(org).catch(() => []);
-        repos.forEach((repo) => {
-          allRepos.push({ repo, owner: org });
-        });
-      })
-    );
-
-    // Fetch user repositories
-    await Promise.all(
-      state.users.map(async (user) => {
-        const repos = await getUserRepositories(user).catch(() => []);
-        repos.forEach((repo) => {
-          allRepos.push({ repo, owner: user });
-        });
+      state.sources.map(async (source) => {
+        // Try as organization first
+        try {
+          const orgRepos = await getOrgRepositories(source);
+          orgRepos.forEach((repo) => {
+            allRepos.push({ repo, owner: source });
+          });
+        } catch {
+          // If org fails, try as user
+          try {
+            const userRepos = await getUserRepositories(source);
+            userRepos.forEach((repo) => {
+              allRepos.push({ repo, owner: source });
+            });
+          } catch {
+            // Ignore inaccessible sources
+          }
+        }
       })
     );
   }

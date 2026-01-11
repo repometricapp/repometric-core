@@ -11,32 +11,12 @@
 export const config = {
   github: {
     /**
-     * Optional single organization (Phase 1 convenience)
+     * GitHub sources (orgs and/or users)
+     * Comma-separated list of GitHub organizations or usernames
      */
-    singleOrganization: process.env.GITHUB_ORG_SINGLE ?? null,
-
-    /**
-     * Optional single user (Phase 1 convenience)
-     */
-    singleUser: process.env.GITHUB_USER_SINGLE ?? null,
-
-    /**
-     * Optional multiple organizations (Phase 2)
-     * Comma-separated GitHub org names
-     */
-    organizations: process.env.GITHUB_ORGS
-      ? process.env.GITHUB_ORGS.split(',')
-          .map((o) => o.trim())
-          .filter(Boolean)
-      : [],
-
-    /**
-     * Optional multiple users (Phase 2)
-     * Comma-separated GitHub usernames
-     */
-    users: process.env.GITHUB_USERS
-      ? process.env.GITHUB_USERS.split(',')
-          .map((u) => u.trim())
+    sources: process.env.GITHUB_SOURCES
+      ? process.env.GITHUB_SOURCES.split(',')
+          .map((s) => s.trim())
           .filter(Boolean)
       : [],
 
@@ -60,29 +40,19 @@ export const config = {
      * Derived configuration state (safe for UI & logs)
      */
     state() {
-      const organizations = Array.from(
-        new Set([
-          ...(this.singleOrganization ? [this.singleOrganization] : []),
-          ...this.organizations,
-        ])
-      );
-
-      const users = Array.from(
-        new Set([...(this.singleUser ? [this.singleUser] : []), ...this.users])
-      );
-
+      const sources = Array.from(new Set(this.sources));
       const repos = Array.from(new Set(this.repos));
 
       /**
        * Precedence rules:
        * 1. Explicit repos
-       * 2. Orgs and/or users
+       * 2. Sources (orgs/users)
        * 3. None
        */
-      let sourceMode: 'none' | 'explicit-repos' | 'orgs-and-users';
+      let sourceMode: 'none' | 'explicit-repos' | 'sources';
 
       if (repos.length > 0) sourceMode = 'explicit-repos';
-      else if (organizations.length > 0 || users.length > 0) sourceMode = 'orgs-and-users';
+      else if (sources.length > 0) sourceMode = 'sources';
       else sourceMode = 'none';
 
       return {
@@ -98,16 +68,10 @@ export const config = {
         repos,
 
         /**
-         * Organization info
+         * GitHub sources (orgs/users)
          */
-        hasOrganizations: organizations.length > 0,
-        organizations,
-
-        /**
-         * User info
-         */
-        hasUsers: users.length > 0,
-        users,
+        hasSources: sources.length > 0,
+        sources,
 
         /**
          * Convenience flags
