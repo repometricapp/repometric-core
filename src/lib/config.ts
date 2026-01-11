@@ -4,15 +4,11 @@
  * Phase 1:
  * - Public repositories only
  * - Single org and/or single user
+ * - No authentication
  * - No assumptions, no throwing
  */
 export const config = {
   github: {
-    /**
-     * Optional GitHub token (rate limits only)
-     */
-    token: process.env.GITHUB_TOKEN ?? null,
-
     /**
      * Optional single organization
      */
@@ -35,12 +31,12 @@ export const config = {
       const hasOrg = Boolean(this.singleOrganization);
       const hasUser = Boolean(this.singleUser);
 
-      let mode: 'none' | 'org-only' | 'user-only' | 'org-and-user';
+      let mode: 'N/A' | 'org-only' | 'user-only' | 'org-and-user';
 
       if (hasOrg && hasUser) mode = 'org-and-user';
       else if (hasOrg) mode = 'org-only';
       else if (hasUser) mode = 'user-only';
-      else mode = 'none';
+      else mode = 'N/A';
 
       return {
         mode,
@@ -48,7 +44,6 @@ export const config = {
         hasUser,
         organization: this.singleOrganization,
         user: this.singleUser,
-        tokenConfigured: Boolean(this.token),
       };
     },
   },

@@ -98,10 +98,6 @@ export default async function StatusPage() {
               <td>User</td>
               <td>{githubState.user ?? '—'}</td>
             </tr>
-            <tr>
-              <td>GitHub Token</td>
-              <td>{githubState.tokenConfigured ? 'Configured' : 'Not set'}</td>
-            </tr>
           </tbody>
         </table>
       </section>

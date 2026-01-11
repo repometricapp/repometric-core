@@ -37,26 +37,17 @@ export class GitHubApiError extends Error {
 
 /**
  * Default headers used for all GitHub API requests.
+ *
+ * Phase 1: unauthenticated, public-only access.
  */
 const defaultHeaders: HeadersInit = {
   Accept: 'application/vnd.github+json',
 };
 
 /**
- * Attach authorization header only if token exists.
- */
-function buildHeaders(extra?: HeadersInit): HeadersInit {
-  return {
-    ...defaultHeaders,
-    ...(config.github.token ? { Authorization: `Bearer ${config.github.token}` } : {}),
-    ...extra,
-  };
-}
-
-/**
  * Core GitHub request wrapper.
  *
- * - Handles auth
+ * - Public, unauthenticated requests
  * - Captures rate limits
  * - Logs all calls
  * - Throws typed errors
@@ -66,7 +57,10 @@ export async function githubRequest<T>(path: string, init: RequestInit = {}): Pr
 
   const res = await fetch(url, {
     ...init,
-    headers: buildHeaders(init.headers),
+    headers: {
+      ...defaultHeaders,
+      ...init.headers,
+    },
     next: { revalidate: 60 },
   });
 

@@ -16,7 +16,7 @@ export async function getGitHubStatus() {
   const { mode, organization, user } = config.github.state();
 
   // Nothing configured → nothing to fetch
-  if (mode === 'none') {
+  if (mode === 'N/A') {
     return [];
   }
 
