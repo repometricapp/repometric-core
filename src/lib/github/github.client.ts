@@ -3,8 +3,7 @@ import { config } from '@/lib/config';
 /**
  * In-memory log of GitHub API calls.
  *
- * This is reset on every server request, which is acceptable
- * for a lightweight status/debug page in Phase 1.
+ * Reset on every server request.
  */
 export const githubApiCalls: {
   endpoint: string;
@@ -15,7 +14,6 @@ export const githubApiCalls: {
 
 /**
  * Stores the most recent GitHub API rate limit information.
- * Updated after every API request.
  */
 export let githubRateLimit: {
   limit: number;
@@ -25,7 +23,6 @@ export let githubRateLimit: {
 
 /**
  * Custom error class for GitHub API failures.
- * Provides additional context beyond the standard Error object.
  */
 export class GitHubApiError extends Error {
   status: number;
@@ -41,63 +38,60 @@ export class GitHubApiError extends Error {
 /**
  * Default headers used for all GitHub API requests.
  */
-const headers: HeadersInit = {
+const defaultHeaders: HeadersInit = {
   Accept: 'application/vnd.github+json',
 };
 
 /**
- * Attach authorization header only when a GitHub token is provided.
- * This increases rate limits but is optional in Phase 1.
+ * Attach authorization header only if token exists.
  */
-if (config.github.token) {
-  headers.Authorization = `Bearer ${config.github.token}`;
+function buildHeaders(extra?: HeadersInit): HeadersInit {
+  return {
+    ...defaultHeaders,
+    ...(config.github.token ? { Authorization: `Bearer ${config.github.token}` } : {}),
+    ...extra,
+  };
 }
 
 /**
- * Wrapper around fetch for making GitHub API requests.
+ * Core GitHub request wrapper.
  *
- * - Handles headers and authentication
- * - Captures rate limit information
- * - Logs request success or failure
- * - Throws a typed error on failure
- *
- * @param path - GitHub API endpoint path (without base URL)
- * @param init - Optional fetch configuration
- * @returns    - Parsed JSON response typed as T
+ * - Handles auth
+ * - Captures rate limits
+ * - Logs all calls
+ * - Throws typed errors
  */
 export async function githubRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const res = await fetch(`${config.github.apiBaseUrl}${path}`, {
+  const url = `${config.github.apiBaseUrl}${path}`;
+
+  const res = await fetch(url, {
     ...init,
-    headers: {
-      ...headers,
-      ...init.headers,
-    },
-    // Cache and revalidate every 60 seconds (Next.js)
+    headers: buildHeaders(init.headers),
     next: { revalidate: 60 },
   });
 
-  // Capture GitHub rate limit headers for observability
+  // Capture rate limit info if present
   githubRateLimit = {
-    limit: Number(res.headers.get('x-ratelimit-limit')),
-    remaining: Number(res.headers.get('x-ratelimit-remaining')),
-    reset: Number(res.headers.get('x-ratelimit-reset')),
+    limit: Number(res.headers.get('x-ratelimit-limit')) || 0,
+    remaining: Number(res.headers.get('x-ratelimit-remaining')) || 0,
+    reset: Number(res.headers.get('x-ratelimit-reset')) || 0,
   };
 
-  // Handle non-successful responses
+  // Handle error responses
   if (!res.ok) {
-    const text = await res.text();
+    const message = await res.text();
 
     githubApiCalls.push({
       endpoint: path,
       status: 'error',
       code: res.status,
-      message: text,
+      message,
     });
 
-    throw new GitHubApiError(res.status, path, text);
+    throw new GitHubApiError(res.status, path, message);
   }
 
-  // Log successful API call
+  // Log success
   githubApiCalls.push({
     endpoint: path,
     status: 'ok',

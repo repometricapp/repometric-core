@@ -1,5 +1,5 @@
 import { config } from '@/lib/config';
-import { getRepositories, getLastCommit } from './github.repos';
+import { getOrgRepositories, getUserRepositories, getLastCommit } from './github.repos';
 import { getLatestWorkflowRun } from './github.actions';
 import { getBranches } from './github.branches';
 import { getOpenPullRequests } from './github.pulls';
@@ -8,34 +8,47 @@ import { GitHubApiError } from './github.client';
 
 /**
  * Aggregates GitHub repository health and status information
- * for a single user or organization (Phase 1).
- *
- * Data collected per repository:
- * - Branches and default branch
- * - Most recent commit date
- * - Latest GitHub Actions workflow run
- * - Open pull requests and issues (presence-based)
+ * for a single organization, single user, or both (Phase 1).
  *
  * Public repositories only.
  */
 export async function getGitHubStatus() {
-  const owner = config.github.owner;
+  const { mode, organization, user } = config.github.state();
 
-  // Fetch all public repositories for the configured owner
-  const repos = await getRepositories(owner);
+  // Nothing configured → nothing to fetch
+  if (mode === 'none') {
+    return [];
+  }
+
+  const allRepos: Array<{ repo: any; owner: string }> = [];
+
+  // Fetch org repositories
+  if ((mode === 'org-only' || mode === 'org-and-user') && organization) {
+    const orgRepos = await getOrgRepositories(organization);
+    orgRepos.forEach((repo) => {
+      allRepos.push({ repo, owner: organization });
+    });
+  }
+
+  // Fetch user repositories
+  if ((mode === 'user-only' || mode === 'org-and-user') && user) {
+    const userRepos = await getUserRepositories(user);
+    userRepos.forEach((repo) => {
+      allRepos.push({ repo, owner: user });
+    });
+  }
 
   // Process each repository in parallel
   return Promise.all(
-    repos.map(async (repo) => {
-      let buildErrorCode = null;
-      let buildErrorMessage = null;
+    allRepos.map(async ({ repo, owner }) => {
+      let buildErrorCode: number | null = null;
+      let buildErrorMessage: string | null = null;
 
       // Fetch the most recent commit on the default branch
       const commits = await getLastCommit(owner, repo.name, repo.default_branch);
       const lastCommit = commits?.[0];
 
       // Attempt to fetch the latest GitHub Actions workflow run
-      // Workflow access may fail if Actions are disabled for the repo
       let workflow = null;
       try {
         workflow = await getLatestWorkflowRun(owner, repo.name);
@@ -47,7 +60,6 @@ export async function getGitHubStatus() {
       }
 
       // Fetch repository branches, pull requests, and issues
-      // Failures are tolerated and treated as empty results
       const branches = await getBranches(owner, repo.name).catch(() => []);
       const pulls = await getOpenPullRequests(owner, repo.name).catch(() => []);
       const issues = await getOpenIssues(owner, repo.name).catch(() => []);
@@ -57,6 +69,7 @@ export async function getGitHubStatus() {
         repo: repo.name,
         visibility: repo.private ? 'private' : 'public',
         defaultBranch: repo.default_branch,
+        owner, // 👈 important for combined mode
 
         // Branch information
         branchCount: branches.length,
@@ -66,7 +79,7 @@ export async function getGitHubStatus() {
         lastCommitDate: lastCommit?.commit.author.date ?? null,
 
         // Build / workflow information
-        lastBuildStatus: workflow?.workflow_runs?.[0]?.conclusion ?? 'unknown',
+        lastBuildStatus: workflow?.workflow_runs?.[0]?.conclusion ?? 'no builds',
         lastBuildTime: workflow?.workflow_runs?.[0]?.updated_at ?? null,
         buildErrorCode,
         buildErrorMessage,

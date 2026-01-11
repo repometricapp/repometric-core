@@ -1,28 +1,55 @@
 /**
  * Centralized application configuration.
  *
- * Values are primarily sourced from environment variables
- * with safe defaults for local development and Phase 1 usage.
+ * Phase 1:
+ * - Public repositories only
+ * - Single org and/or single user
+ * - No assumptions, no throwing
  */
 export const config = {
   github: {
     /**
-     * Optional GitHub token.
-     *
-     * Used to increase API rate limits.
-     * Public repositories only in Phase 1.
+     * Optional GitHub token (rate limits only)
      */
     token: process.env.GITHUB_TOKEN ?? null,
 
     /**
-     * GitHub username or organization to analyze.
-     * Defaults to the Repometric organization for development.
+     * Optional single organization
      */
-    owner: process.env.GITHUB_ORG_SINGLE ?? 'repometricapp',
+    singleOrganization: process.env.GITHUB_ORG_SINGLE ?? null,
 
     /**
-     * Base URL for the GitHub REST API.
+     * Optional single user
+     */
+    singleUser: process.env.GITHUB_USER_SINGLE ?? null,
+
+    /**
+     * GitHub REST API base URL
      */
     apiBaseUrl: 'https://api.github.com',
+
+    /**
+     * Derived configuration state (safe for UI)
+     */
+    state() {
+      const hasOrg = Boolean(this.singleOrganization);
+      const hasUser = Boolean(this.singleUser);
+
+      let mode: 'none' | 'org-only' | 'user-only' | 'org-and-user';
+
+      if (hasOrg && hasUser) mode = 'org-and-user';
+      else if (hasOrg) mode = 'org-only';
+      else if (hasUser) mode = 'user-only';
+      else mode = 'none';
+
+      return {
+        mode,
+        hasOrganization: hasOrg,
+        hasUser,
+        organization: this.singleOrganization,
+        user: this.singleUser,
+        tokenConfigured: Boolean(this.token),
+      };
+    },
   },
 };
